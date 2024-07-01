@@ -1,5 +1,6 @@
 import winston from 'winston';
 import util from 'util';
+const { ParseableTransport } = require('parseable-winston')
 import { LEVEL, SPLAT, MESSAGE } from 'triple-beam';
 
 // There's nothing Temporal specific in this file.
@@ -24,13 +25,24 @@ const devLogFormat = winston.format.printf(({ level, message, label, timestamp, 
     : `${getDateStr(timestamp)} [${label}] ${level}: ${message} ${util.inspect(restNoSymbols, false, 4, true)}`;
 });
 
+const parseable = new ParseableTransport({
+  url: process.env.PARSEABLE_LOGS_URL, 
+  username: process.env.PARSEABLE_LOGS_USERNAME,
+  password: process.env.PARSEABLE_LOGS_PASSWORD,
+  logstream: process.env.PARSEABLE_LOGS_LOGSTREAM, // The logstream name
+  tags: { tag1: 'tagValue' } // optional tags to be added with each ingestion
+})
+
 /** Create a winston logger from given options */
 export function createLogger({ isProduction, logFilePath }: LoggerOptions): winston.Logger {
   return winston.createLogger({
     level: 'debug',
     format: isProduction ? winston.format.json() : winston.format.combine(winston.format.colorize(), devLogFormat),
-    transports: [
-      isProduction ? new winston.transports.File({ filename: logFilePath }) : new winston.transports.Console(),
+    // transports: [
+    //   isProduction ? new winston.transports.File({ filename: logFilePath }) : new winston.transports.Console(),
+    // ],
+    transports: [parseable
     ],
+
   });
 }
